@@ -37,6 +37,7 @@ extension Forever {
     ///}
     /// ```
     public var publisher: AnyPublisher<Value, Never> {
-        subject.eraseToAnyPublisher()
+        _ = box.store
+        return store.values.eraseToAnyPublisher()
     }
 }

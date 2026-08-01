@@ -123,3 +123,30 @@ private enum ForeverStoreRegistry {
     static let lock = NSLock()
     static var registry: [RegistryKey: WeakBox] = [:]
 }
+
+/// A stable strong reference to a ``ForeverStore``.
+///
+/// ``Forever``'s `@StateObject` storage is only installed inside a SwiftUI view
+/// hierarchy; accessed from a plain class (UIKit + Combine usage) it resolves a
+/// fresh store on every access and retains nothing. The box resolves the shared
+/// registry store once and retains it, so every access — inside or outside a
+/// view — sees the same instance.
+final class ForeverStoreBox<Value: Codable> {
+    private let key: String
+    private let defaultValue: Value
+    private var resolved: ForeverStore<Value>?
+
+    init(key: String, defaultValue: Value) {
+        self.key = key
+        self.defaultValue = defaultValue
+    }
+
+    var store: ForeverStore<Value> {
+        if let resolved {
+            return resolved
+        }
+        let store = ForeverStore.shared(key: key, default: defaultValue)
+        resolved = store
+        return store
+    }
+}

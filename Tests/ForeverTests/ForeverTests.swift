@@ -208,4 +208,53 @@ final class ForeverTests: XCTestCase {
         let rehydrated = ForeverStore.shared(key: key, default: 0)
         XCTAssertEqual(rehydrated.value, 11, "A fresh store must rehydrate the persisted value from disk")
     }
+
+    // MARK: - Forever wrapper (no view hierarchy)
+
+    func testForeverWrapperInstancesWithSameKeyShareOneStore() {
+        let key = makeKey("wrapper-shared")
+
+        var a = Forever(wrappedValue: 0, key)
+        var b = Forever(wrappedValue: 0, key)
+
+        a.wrappedValue = 5
+        XCTAssertEqual(b.wrappedValue, 5, "A write through one wrapper must be visible through another with the same key")
+
+        b.wrappedValue = 7
+        XCTAssertEqual(a.wrappedValue, 7, "Sync must work in both directions")
+    }
+
+    /// A UIKit-style class holding a `Forever` property, with no SwiftUI view hierarchy.
+    private final class PlainCounter {
+        @Forever var value: Int
+
+        var cancellables = Set<AnyCancellable>()
+        var emitted: [Int] = []
+
+        init(key: String) {
+            _value = Forever(wrappedValue: 0, key)
+            _value.publisher.sink { [weak self] value in
+                self?.emitted.append(value)
+            }
+            .store(in: &cancellables)
+        }
+    }
+
+    func testViewlessUsagePersistsAndPublishes() {
+        let key = makeKey("viewless")
+
+        var counter: PlainCounter? = PlainCounter(key: key)
+        counter?.value = 1
+        counter?.value = 2
+        XCTAssertEqual(counter?.emitted, [1, 2], "The publisher must emit the new value, not the stale pre-write value")
+
+        let url = Self.archiveURL(for: key)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+
+        counter = nil
+
+        let rehydrated = PlainCounter(key: key)
+        XCTAssertEqual(rehydrated.value, 2, "A new instance hydrates the persisted value from disk")
+        XCTAssertEqual(rehydrated.emitted, [])
+    }
 }

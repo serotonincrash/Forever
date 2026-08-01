@@ -7,7 +7,6 @@
 
 import Foundation
 import SwiftUI
-import Combine
  
 /// Ever wanted to tell a variable to "Don't Die"?
 ///
@@ -251,38 +250,33 @@ public typealias BePersistent = Forever
 /// - ``BePersistent``
 @propertyWrapper public struct Forever<Value: Codable>: DynamicProperty {
     
-    let subject = PassthroughSubject<Value, Never>()
-    
     /// A key to retrieve the stored value
     public var key: String
     
-    @State private var value: Value
+    @StateObject var store: ForeverStore<Value>
+    
+    let box: ForeverStoreBox<Value>
     
     public var wrappedValue: Value {
         get {
-            return getValue() ?? value
+            _ = box.store   // retain the shared store (stable outside view hierarchies)
+            return store.value
         }
         nonmutating set {
-            self.value = newValue
-            save(value: newValue)
+            _ = box.store
+            store.set(newValue)
         }
     }
     
     /// A binding to the ``Forever`` value.
     public var projectedValue: Binding<Value> {
-        Binding {
-            _value.wrappedValue
-        } set: { value, transaction in
-            
-            if transaction.disablesAnimations {
-                self.value = value
-            } else {
-                withAnimation(transaction.animation) {
-                    self.value = value
-                }
-            }
-            save(value: value)
-        }
+        Binding(get: {
+            _ = box.store
+            return store.value
+        }, set: { value in
+            _ = box.store
+            store.set(value)
+        })
     }
     
     public init(wrappedValue: Value, _ key: String, file: String = #file, line: UInt = #line) {
@@ -290,10 +284,7 @@ public typealias BePersistent = Forever
         
         self.key = key
         
-        _value = State(wrappedValue: wrappedValue)
-        
-        if let value = getValue() {
-            _value = State(wrappedValue: value)
-        }
+        _store = StateObject(wrappedValue: ForeverStore.shared(key: key, default: wrappedValue))
+        box = ForeverStoreBox(key: key, defaultValue: wrappedValue)
     }
 }

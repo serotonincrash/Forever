@@ -26,6 +26,10 @@ struct Todo: Codable {
 @Forever("counter") var counter = 1
 ```
 
+## One value, many views
+
+Every `@Forever` instance with the same key (and same value type) is backed by a single shared store: write from any view, and every other view with that key updates immediately — no app restart needed.
+
 ## Using UIKit? `Forever`+Combine
 Thanks https://github.com/jiachenyee/Forever/issues/1.
 ```swift
