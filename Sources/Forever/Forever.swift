@@ -253,28 +253,27 @@ public typealias BePersistent = Forever
     /// A key to retrieve the stored value
     public var key: String
     
-    @StateObject var store: ForeverStore<Value>
-    
-    let box: ForeverStoreBox<Value>
+    @State var store: ForeverStore<Value>
     
     public var wrappedValue: Value {
         get {
-            _ = box.store   // retain the shared store (stable outside view hierarchies)
-            return store.value
+            store.value
         }
         nonmutating set {
-            _ = box.store
             store.set(newValue)
         }
     }
     
     /// A binding to the ``Forever`` value.
+    ///
+    /// This is deliberately a manual `Binding(get:set:)` rather than
+    /// `Bindable(store).value`: `value` is `private(set)`, so the key path is
+    /// read-only, and a writable direct set would bypass the ``set(_:)`` funnel
+    /// (persistence + publisher). Do not "modernize" this to `Bindable`.
     public var projectedValue: Binding<Value> {
         Binding(get: {
-            _ = box.store
-            return store.value
+            store.value
         }, set: { value in
-            _ = box.store
             store.set(value)
         })
     }
@@ -284,7 +283,6 @@ public typealias BePersistent = Forever
         
         self.key = key
         
-        _store = StateObject(wrappedValue: ForeverStore.shared(key: key, default: wrappedValue))
-        box = ForeverStoreBox(key: key, defaultValue: wrappedValue)
+        _store = State(wrappedValue: ForeverStore.shared(key: key, default: wrappedValue))
     }
 }

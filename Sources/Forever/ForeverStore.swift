@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import Observation
 import OSLog
 
 /// The shared, in-memory source of truth behind ``Forever``.
@@ -16,10 +17,11 @@ import OSLog
 /// All ``Forever`` instances that share a key (and value type) are backed by the
 /// same store, so a write through any one of them is immediately visible to all
 /// of them.
-public final class ForeverStore<Value: Codable>: ObservableObject {
+@Observable
+public final class ForeverStore<Value: Codable> {
 
     /// The current value. This is the single source of truth while the store is alive.
-    @Published public private(set) var value: Value
+    public private(set) var value: Value
 
     /// The key this store persists under (`<key>.plist` in the documents directory).
     public let key: String
@@ -38,9 +40,10 @@ public final class ForeverStore<Value: Codable>: ObservableObject {
 
     /// Replaces the in-memory value, attempts to persist it, then publishes it.
     ///
+    /// `set(_:)` is the single mutation path: every write goes through here.
     /// Order matters:
-    /// 1. `value` is updated first; `@Published` notifies SwiftUI through
-    ///    `objectWillChange`, invalidating every view observing this store.
+    /// 1. `value` is updated first; the Observation registrar notifies SwiftUI,
+    ///    invalidating every view that read `value`.
     /// 2. The value is written to disk. Failures (for example a `Double`
     ///    containing `nan`, which `JSONEncoder` cannot encode) are logged via
     ///    OSLog and never thrown. The value still lives in memory, but it will
@@ -122,31 +125,4 @@ private final class WeakBox {
 private enum ForeverStoreRegistry {
     static let lock = NSLock()
     static var registry: [RegistryKey: WeakBox] = [:]
-}
-
-/// A stable strong reference to a ``ForeverStore``.
-///
-/// ``Forever``'s `@StateObject` storage is only installed inside a SwiftUI view
-/// hierarchy; accessed from a plain class (UIKit + Combine usage) it resolves a
-/// fresh store on every access and retains nothing. The box resolves the shared
-/// registry store once and retains it, so every access — inside or outside a
-/// view — sees the same instance.
-final class ForeverStoreBox<Value: Codable> {
-    private let key: String
-    private let defaultValue: Value
-    private var resolved: ForeverStore<Value>?
-
-    init(key: String, defaultValue: Value) {
-        self.key = key
-        self.defaultValue = defaultValue
-    }
-
-    var store: ForeverStore<Value> {
-        if let resolved {
-            return resolved
-        }
-        let store = ForeverStore.shared(key: key, default: defaultValue)
-        resolved = store
-        return store
-    }
 }
