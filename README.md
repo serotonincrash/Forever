@@ -8,11 +8,11 @@
 > For full documentation, click [here](https://forever.jiachen.app/documentation/forever/forever).
 
 ```swift
-@Forever("todos") var todos = [Todo(title: "Feed the cat", isCompleted: true),
-                               Todo(title: "Play with cat"),
-                               Todo(title: "Get allergies"),
-                               Todo(title: "Run away from cat"),
-                               Todo(title: "Get a new cat")]
+@Forever("todos") var todos: [Todo] = [Todo(title: "Feed the cat", isCompleted: true),
+                                      Todo(title: "Play with cat"),
+                                      Todo(title: "Get allergies"),
+                                      Todo(title: "Run away from cat"),
+                                      Todo(title: "Get a new cat")]
 ```
 ```swift
 struct Todo: Codable {
@@ -21,9 +21,11 @@ struct Todo: Codable {
 }
 ```
 
+`@Forever` is an attached macro: give it a key, an explicit type, and an initial value. It reads and writes like a normal property, projects a classic `Binding` (`$todos`), and persists every mutation to `<key>.plist` in the documents directory.
+
 ## One line and it lasts `@Forever`.
 ```swift
-@Forever("counter") var counter = 1
+@Forever("counter") var counter: Int = 1
 ```
 
 ## One value, many views
@@ -35,7 +37,7 @@ Thanks https://github.com/jiachenyee/Forever/issues/1.
 ```swift
 class ViewController: UIViewController {
 
-    @Forever("counter") var counter = 1
+    @Forever("counter") var counter: Int = 1
     var cancellables = Set<AnyCancellable>()
     
     override func viewDidLoad() {
@@ -50,12 +52,14 @@ class ViewController: UIViewController {
 }
 ```
 
-## Don't like _Forever_? Use another one.
+## Prefer the classic property wrapper?
+`@Forever` now resolves to the attached macro. The original property wrapper — with type inference and the same `$` projection — remains available under its alias names:
 ```swift
 @DontDie("name") var name = "Potato"
 @DontLeaveMe("todo") var todo = Todo(...)
 @BePersistent("a") var b = true
 ```
+Both spellings share the same store, so `@Forever("counter")` and `@DontDie("counter")` stay in sync.
 
 ## Installation
 ### Requirements
