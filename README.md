@@ -61,10 +61,14 @@ class ViewController: UIViewController {
 ### Requirements
 | Platform | Version       |
 |:--------:|:--------------|
-|   iOS    | 13.0 or later |
-|  macOS   | 11.0 or later |
-| watchOS  | 6.0 or later  |
-|   tvOS   | 13.0 or later |
+|   iOS    | 17.0 or later |
+|  macOS   | 14.0 or later |
+| watchOS  | 10.0 or later |
+|   tvOS   | 17.0 or later |
+
+> Forever is built on the Observation framework, so it requires iOS 17 / macOS 14 / watchOS 10 / tvOS 17 and Xcode 15+. The `main` branch remains available for clients targeting older OS versions.
+>
+> The Combine `publisher` API is retained for UIKit and other non-SwiftUI clients.
 
 ### Add as Swift Package
 In Xcode, File → Add Packages… → Paste `https://github.com/jiachenyee/forever` in the search field.

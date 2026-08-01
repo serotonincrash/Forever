@@ -17,10 +17,18 @@ import OSLog
 /// All ``Forever`` instances that share a key (and value type) are backed by the
 /// same store, so a write through any one of them is immediately visible to all
 /// of them.
+///
+/// The store is an `@Observable` class: SwiftUI views that read ``value`` in
+/// their body are invalidated automatically when it changes, through the
+/// Observation framework's registrar.
 @Observable
 public final class ForeverStore<Value: Codable> {
 
     /// The current value. This is the single source of truth while the store is alive.
+    ///
+    /// The setter is `private(set)`: ``set(_:)`` is the sole mutation path, so
+    /// every write is persisted and published. A writable `value` would let
+    /// direct sets bypass that funnel while still invalidating views.
     public private(set) var value: Value
 
     /// The key this store persists under (`<key>.plist` in the documents directory).

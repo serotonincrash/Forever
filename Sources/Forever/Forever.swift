@@ -163,6 +163,13 @@ public typealias BePersistent = Forever
 /// // pineapple == "apple"
 /// ```
 ///
+/// All instances of `Forever` that share a ``key`` (and `Value` type) are backed by a single shared store, so a value written through any one of them is immediately reflected in all of the others — no app restart required.
+///
+/// Views that read the value in their `body` are invalidated through the
+/// Observation framework: `Forever` holds an `@Observable` store, and every
+/// write funnels through ``ForeverStore/set(_:)``, which updates the value,
+/// attempts to persist it, and publishes it through ``publisher``.
+///
 /// If a value cannot be retrieved, either because the value is not there or an error decoding the value, it will use the default value provided.
 ///
 /// In the example below, when the variable is first initialized, `Forever` will store the value as 1.
@@ -255,6 +262,8 @@ public typealias BePersistent = Forever
     
     @State var store: ForeverStore<Value>
     
+    /// The current value. Reading it registers Observation tracking; setting it
+    /// funnels through ``ForeverStore/set(_:)`` (persist + publish).
     public var wrappedValue: Value {
         get {
             store.value
