@@ -240,8 +240,12 @@ final class ForeverTests: XCTestCase {
     }
 
     /// A UIKit-style class holding a `Forever` property, with no SwiftUI view hierarchy.
+    ///
+    /// Uses the `DontDie` typealias: in attribute position, `@Forever` now
+    /// resolves to the macro, while the aliases keep resolving to the classic
+    /// property-wrapper type.
     private final class PlainCounter {
-        @Forever var value: Int
+        @DontDie var value: Int
 
         var cancellables = Set<AnyCancellable>()
         var emitted: [Int] = []
