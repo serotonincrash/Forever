@@ -5,6 +5,7 @@
 
 import XCTest
 import Combine
+import Observation
 @testable import Forever
 
 final class ForeverTests: XCTestCase {
@@ -149,20 +150,34 @@ final class ForeverTests: XCTestCase {
         withExtendedLifetime(cancellable) {}
     }
 
-    func testSetNotifiesObjectWillChange() {
-        let key = makeKey("objectWillChange")
+    func testSetNotifiesObservationTrackingWhenValueIsRead() {
+        let key = makeKey("observation")
 
         let store = ForeverStore.shared(key: key, default: 0)
 
-        var changes = 0
-        let cancellable = store.objectWillChange.sink { changes += 1 }
-
+        // Tracking is read-gated: a closure that never reads `value` registers nothing.
+        var unobservedChanges = 0
+        withObservationTracking {
+            _ = store.key // `let` properties are not observable
+        } onChange: {
+            unobservedChanges += 1
+        }
         store.set(1)
+        XCTAssertEqual(unobservedChanges, 0, "Only properties actually read inside the tracking closure are tracked")
+
+        // Reading `value` registers a dependency; the next set must fire onChange.
+        var changes = 0
+        withObservationTracking {
+            _ = store.value
+        } onChange: {
+            changes += 1
+        }
         store.set(2)
+        XCTAssertEqual(changes, 1, "Each set must invalidate observing views via the Observation registrar")
 
-        XCTAssertEqual(changes, 2, "Each set must invalidate observing SwiftUI views via objectWillChange")
-
-        withExtendedLifetime(cancellable) {}
+        // onChange is one-shot: further sets do not fire it again without re-tracking.
+        store.set(3)
+        XCTAssertEqual(changes, 1, "withObservationTracking's onChange is one-shot")
     }
 
     // MARK: - Encode failure
@@ -256,5 +271,31 @@ final class ForeverTests: XCTestCase {
         let rehydrated = PlainCounter(key: key)
         XCTAssertEqual(rehydrated.value, 2, "A new instance hydrates the persisted value from disk")
         XCTAssertEqual(rehydrated.emitted, [])
+    }
+
+    func testViewlessAccessReturnsStableRetainedStore() {
+        let key = makeKey("viewless-stability")
+
+        var wrapper = Forever(wrappedValue: 0, key)
+
+        // Every access resolves the same store instance: `@State` stores the
+        // initial value in the struct, so no fresh store is resolved per access
+        // (unlike an uninstalled `@StateObject`).
+        let first = wrapper.store
+        let second = wrapper.store
+        XCTAssertTrue(first === second, "Repeated access outside a view hierarchy must return the same store instance")
+
+        // The wrapper retains the store for its whole lifetime.
+        weak var weakStore = first
+        withExtendedLifetime(wrapper) {
+            XCTAssertNotNil(weakStore, "The wrapper must retain the store")
+        }
+
+        // The stable store still persists and publishes.
+        wrapper.wrappedValue = 5
+        XCTAssertEqual(second.value, 5, "A write through one access must be visible through another")
+        let url = Self.archiveURL(for: key)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        XCTAssertEqual(try JSONDecoder().decode(Int.self, from: Data(contentsOf: url)), 5)
     }
 }
