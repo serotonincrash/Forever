@@ -5,7 +5,7 @@ import SwiftDiagnostics
 
 /// Implementation of the `@Forever` attached macro.
 ///
-/// The macro is pure sugar over the ``Forever`` property wrapper: it emits
+/// The macro is pure sugar over the ``Forever`` storage type: it emits
 /// `init`/`get`/`set` accessors that forward to a peer `_<name>: Forever<T>`
 /// backing property, plus a `$<name>: Binding<T>` projection peer that mimics
 /// the property-wrapper `$` syntax (the `prefixed($)` special case).
@@ -14,12 +14,12 @@ import SwiftDiagnostics
 /// (`Forever` / `ForeverStore`); the expansion contains none of it.
 public struct ForeverMacro: AccessorMacro, PeerMacro {
 
-    /// The property-wrapper type referenced by expansions.
+    /// The backing storage type referenced by expansions.
     ///
-    /// A macro and a property-wrapper type may share the name `Forever`:
-    /// the macro wins in attribute position, so expansions can still name
-    /// the wrapper type directly.
-    private static let wrapperType = "Forever"
+    /// The `@Forever` macro and its `@DontDie`/`@DontLeaveMe`/`@BePersistent`
+    /// aliases all expand to a `Forever<Value>` backing property, so every
+    /// alias shares one storage type name.
+    private static let backingType = "Forever"
 
     // MARK: - Shared validation
 
@@ -177,7 +177,7 @@ public struct ForeverMacro: AccessorMacro, PeerMacro {
         let initAccessor = AccessorDeclSyntax("""
             @storageRestrictions(initializes: \(raw: backing))
             init(initialValue) {
-                \(raw: backing) = \(raw: Self.wrapperType)(wrappedValue: initialValue, \(raw: key))
+                \(raw: backing) = \(raw: Self.backingType)(wrappedValue: initialValue, \(raw: key))
             }
             """)
 
@@ -227,7 +227,7 @@ public struct ForeverMacro: AccessorMacro, PeerMacro {
 
         // private var _todos: Forever<[Todo]>
         let backingDecl = DeclSyntax(
-            stringLiteral: "private var \(backing): \(Self.wrapperType)<\(type)>")
+            stringLiteral: "private var \(backing): \(Self.backingType)<\(type)>")
 
         // var $todos: Binding<[Todo]> { _todos.projectedValue }   (access level mirrored)
         let accessLevel = info.accessModifiers.isEmpty

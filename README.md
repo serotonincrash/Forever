@@ -52,14 +52,15 @@ class ViewController: UIViewController {
 }
 ```
 
-## Prefer the classic property wrapper?
-`@Forever` now resolves to the attached macro. The original property wrapper — with type inference and the same `$` projection — remains available under its alias names:
+## Prefer a different name?
+`@DontDie`, `@DontLeaveMe`, and `@BePersistent` are alternate names for the same `@Forever` macro — same store, same `$` projection, same everything:
 ```swift
-@DontDie("name") var name = "Potato"
-@DontLeaveMe("todo") var todo = Todo(...)
-@BePersistent("a") var b = true
+@DontDie("counter") var counter: Int = 0
+@DontLeaveMe("counter") var alsoCounter: Int = 0   // same store
 ```
-Both spellings share the same store, so `@Forever("counter")` and `@DontDie("counter")` stay in sync.
+Like `@Forever`, they need an explicit type and an initial value.
+
+> **Migrating to 2.0:** `@Forever` and its aliases are macros only. The previous property-wrapper form with type inference — `@DontDie("k") var x = 0` — is no longer supported; add an explicit type and initial value: `@DontDie("k") var x: Int = 0`.
 
 ## Installation
 ### Requirements

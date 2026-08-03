@@ -6,7 +6,7 @@
 //  must wire into the same shared runtime as the property wrapper.
 //
 
-import XCTest
+import Testing
 import Combine
 import SwiftUI
 @testable import Forever
@@ -24,16 +24,17 @@ extension MacroUser {
     var publisherForTesting: AnyPublisher<Int, Never> { _value.publisher }
 }
 
-final class ForeverMacroBehaviorTests: XCTestCase {
+@Suite(.serialized)
+final class ForeverMacroBehaviorTests {
 
+    /// Keys created during the current test; cleaned up when this instance is
+    /// deinitialized (Swift Testing makes a fresh instance per test).
     private var keysToCleanUp: [String] = []
 
-    override func tearDown() {
+    deinit {
         for key in keysToCleanUp {
             try? FileManager.default.removeItem(at: ForeverStore<Int>.archiveURL(for: key))
         }
-        keysToCleanUp.removeAll()
-        super.tearDown()
     }
 
     private func makeKey(_ name: String) -> String {
@@ -42,7 +43,7 @@ final class ForeverMacroBehaviorTests: XCTestCase {
         return key
     }
 
-    func testMacroPropertySetPersistsAndPublishes() {
+    @Test func macroPropertySetPersistsAndPublishes() {
         MacroUser.key = makeKey("macro-behavior")
         let user = MacroUser()
 
@@ -51,42 +52,42 @@ final class ForeverMacroBehaviorTests: XCTestCase {
 
         user.value = 42
 
-        XCTAssertEqual(user.value, 42)
-        XCTAssertEqual(emitted, [42], "publisher must emit the new value")
+        #expect(user.value == 42)
+        #expect(emitted == [42], "publisher must emit the new value")
 
         let url = ForeverStore<Int>.archiveURL(for: MacroUser.key)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
-        XCTAssertEqual(try? JSONDecoder().decode(Int.self, from: Data(contentsOf: url)), 42)
+        #expect(FileManager.default.fileExists(atPath: url.path))
+        #expect((try? JSONDecoder().decode(Int.self, from: Data(contentsOf: url))) == 42)
 
         _ = cancellable
     }
 
-    func testMacroInstancesWithSameKeySync() {
+    @Test func macroInstancesWithSameKeySync() {
         MacroUser.key = makeKey("macro-sync")
         let first = MacroUser()
         let second = MacroUser()
 
         first.value = 7
 
-        XCTAssertEqual(second.value, 7, "same-key instances must share one store")
+        #expect(second.value == 7, "same-key instances must share one store")
     }
 
-    func testDollarProjectionReadsAndWrites() {
+    @Test func dollarProjectionReadsAndWrites() {
         MacroUser.key = makeKey("macro-projection")
         let user = MacroUser()
         user.value = 1
 
         let binding: Binding<Int> = user.$value
-        XCTAssertEqual(binding.wrappedValue, 1)
+        #expect(binding.wrappedValue == 1)
 
         binding.wrappedValue = 5
-        XCTAssertEqual(user.value, 5)
+        #expect(user.value == 5)
 
         let url = ForeverStore<Int>.archiveURL(for: MacroUser.key)
-        XCTAssertEqual(try? JSONDecoder().decode(Int.self, from: Data(contentsOf: url)), 5)
+        #expect((try? JSONDecoder().decode(Int.self, from: Data(contentsOf: url))) == 5)
     }
 
-    func testMacroPropertyHydratesFromDisk() {
+    @Test func macroPropertyHydratesFromDisk() {
         let key = makeKey("macro-hydrate")
 
         // Persist a value through the runtime directly.
@@ -95,6 +96,6 @@ final class ForeverMacroBehaviorTests: XCTestCase {
 
         MacroUser.key = key
         let user = MacroUser()
-        XCTAssertEqual(user.value, 99, "macro property must hydrate from the persisted value")
+        #expect(user.value == 99, "macro property must hydrate from the persisted value")
     }
 }

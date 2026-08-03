@@ -33,11 +33,35 @@
 ///   computed properties, top-level variables, or properties in extensions.
 ///
 /// For Combine, access ``Forever/publisher`` through the backing property:
-/// `_todos.publisher`. For the classic property-wrapper syntax with type
-/// inference, see the typealiases such as ``DontDie``.
+/// `_todos.publisher`.
 ///
 /// - Parameter key: A key to retrieve the stored value. Must be unique per
 ///   stored item and non-empty.
 @attached(accessor, names: named(init), named(get), named(set))
 @attached(peer, names: prefixed(_), prefixed(`$`))
 public macro Forever(_ key: String) = #externalMacro(module: "ForeverMacros", type: "ForeverMacro")
+
+// MARK: - Alternate names
+
+/// An alternate name for the ``Forever`` macro, for those who prefer to tell
+/// their variables not to die.
+///
+/// ```swift
+/// @DontDie("counter") var counter: Int = 0
+/// ```
+///
+/// Like ``Forever``, this requires an explicit type annotation and an initial
+/// value, and expands to the same `Forever` backing store.
+@attached(accessor, names: named(init), named(get), named(set))
+@attached(peer, names: prefixed(_), prefixed(`$`))
+public macro DontDie(_ key: String) = #externalMacro(module: "ForeverMacros", type: "ForeverMacro")
+
+/// An alternate name for the ``Forever`` macro.
+@attached(accessor, names: named(init), named(get), named(set))
+@attached(peer, names: prefixed(_), prefixed(`$`))
+public macro DontLeaveMe(_ key: String) = #externalMacro(module: "ForeverMacros", type: "ForeverMacro")
+
+/// An alternate name for the ``Forever`` macro.
+@attached(accessor, names: named(init), named(get), named(set))
+@attached(peer, names: prefixed(_), prefixed(`$`))
+public macro BePersistent(_ key: String) = #externalMacro(module: "ForeverMacros", type: "ForeverMacro")
